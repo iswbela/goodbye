@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --yellow:        #faf3c0;
+      --yellow-dark:   #f5e882;
+      --content-bg:    #fffef5;
+      --text-primary:  #1c1c1e;
+      --text-secondary:#636366;
+      --text-tertiary: #aeaeb2;
+      --divider:       rgba(0,0,0,0.08);
+      --shadow-lg:     0 20px 60px rgba(0,0,0,0.2);
+      --radius:        12px;
+      --radius-sm:     8px;
+      --font-serif:    'Lora', Georgia, serif;
+      --font-sans:     'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --unlock-color:  #34c759;
+      --error-color:   #ff3b30;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-sans);
+      background: #c8c09a;
+      overflow: hidden;
+    }
+
+    /* ── App Window ── */
+    .app-window {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--content-bg);
+    }
+
+    /* ── Traffic Lights ── */
+    .traffic-lights {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+    .tl {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .tl--close { background: #ff5f57; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+    .tl--min   { background: #ffbd2e; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+    .tl--max   { background: #28c840; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+    .tl:hover  { filter: brightness(0.82); }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      height: 48px;
+      background: var(--yellow);
+      border-bottom: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      padding: 0 16px 0 100px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .toolbar-title {
+      flex: 1;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.2px;
+      text-align: center;
+      padding-right: 42px; /* compensar o botão à direita */
+    }
+
+    .lock-btn {
+      width: 34px; height: 34px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .lock-btn:hover { background: rgba(0,0,0,0.07); color: var(--text-primary); }
+    .lock-btn.is-unlocked { color: var(--unlock-color); }
+
+    /* ── Content ── */
+    .note-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 44px 72px 72px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,0,0,0.12) transparent;
+    }
+
+    .note-content::-webkit-scrollbar { width: 5px; }
+    .note-content::-webkit-scrollbar-track { background: transparent; }
+    .note-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+
+    .note-date-label {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-tertiary);
+      text-align: center;
+      margin-bottom: 28px;
+      letter-spacing: 0.2px;
+    }
+
+    .note-title {
+      font-family: var(--font-serif);
+      font-size: 30px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-bottom: 18px;
+      letter-spacing: -0.3px;
+    }
+
+    .note-body {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      color: #3a3a3c;
+      line-height: 1.85;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ── Unlocked Section ── */
+    .unlocked-block {
+      margin-top: 44px;
+      animation: unlockReveal 0.45s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes unlockReveal {
+      from { opacity: 0; transform: scale(0.96) translateY(12px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .unlocked-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .unlocked-divider-line {
+      flex: 1; height: 1px;
+      background: rgba(52,199,89,0.3);
+    }
+    .unlocked-divider-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--unlock-color);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .unlocked-body {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      color: #213325;
+      line-height: 1.85;
+      white-space: pre-wrap;
+      word-break: break-word;
+      padding: 22px 28px;
+      background: rgba(52,199,89,0.07);
+      border-left: 3px solid var(--unlock-color);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .lock-again-btn {
+      margin-top: 14px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 0;
+      transition: color 0.2s;
+    }
+    .lock-again-btn:hover { color: var(--text-secondary); }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.38);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-backdrop.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: rgba(255,253,240,0.97);
+      border-radius: 18px;
+      padding: 32px 28px 26px;
+      width: 340px;
+      box-shadow: var(--shadow-lg);
+      transform: scale(0.9) translateY(14px);
+      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+      border: 1px solid rgba(255,255,255,0.7);
+    }
+    .modal-backdrop.visible .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-icon {
+      width: 58px; height: 58px;
+      background: var(--yellow-dark);
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    }
+
+    .modal-title {
+      font-family: var(--font-sans);
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: center;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .modal-subtitle {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(255,255,255,0.85);
+      border: 1.5px solid rgba(0,0,0,0.1);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      color: var(--text-primary);
+      text-align: center;
+      letter-spacing: 5px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .modal-input:focus {
+      border-color: rgba(0,0,0,0.22);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+    }
+    .modal-input.error {
+      border-color: var(--error-color);
+      animation: shake 0.35s ease;
+      box-shadow: 0 0 0 3px rgba(255,59,48,0.12);
+    }
+    .modal-input::placeholder {
+      letter-spacing: 6px;
+      color: var(--text-tertiary);
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-7px); }
+      40%      { transform: translateX(7px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    .modal-error {
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      color: var(--error-color);
+      text-align: center;
+      margin-top: 10px;
+      min-height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: filter 0.15s, transform 0.1s;
+    }
+    .modal-btn:active { transform: scale(0.97); }
+
+    .modal-btn--cancel {
+      background: rgba(0,0,0,0.07);
+      color: var(--text-primary);
+    }
+    .modal-btn--cancel:hover { filter: brightness(0.93); }
+
+    .modal-btn--confirm {
+      background: #1c1c1e;
+      color: #fff;
+    }
+    .modal-btn--confirm:hover { filter: brightness(1.25); }
+
+    @media (max-width: 500px) {
+      .note-content { padding: 28px 22px 48px; }
+      .toolbar { padding-left: 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-window">
+
+  <!-- Traffic Lights -->
+  <div class="traffic-lights">
+    <span class="tl tl--close"></span>
+    <span class="tl tl--min"></span>
+    <span class="tl tl--max"></span>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-title">Notas</span>
+    <button class="lock-btn" id="lockBtn" onclick="openModal()" title="Acessar nota protegida">
+      <svg id="lockIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Note Body -->
+  <div class="note-content" id="noteContentArea"></div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5a4500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <h2 class="modal-title">Nota Protegida</h2>
+    <p class="modal-subtitle">Insira o código para desbloquear<br>o conteúdo secreto.</p>
+    <input
+      type="password"
+      class="modal-input"
+      id="codeInput"
+      placeholder="• • • • • •"
+      maxlength="30"
+      autocomplete="off"
+      onkeydown="handleKey(event)"
+      oninput="clearError()"
+    />
+    <div class="modal-error" id="modalError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn--cancel" onclick="closeModal()">Cancelar</button>
+      <button class="modal-btn modal-btn--confirm" onclick="tryUnlock()">Desbloquear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════════
+  // CONFIGURAÇÃO, edite aqui para personalizar o app
+  //
+  // Para criptografar texto:
+  //   Abra o console do navegador (F12) e execute:
+  //   base64EncodeUnicode('seu texto aqui')
+  //   Cole o resultado em textoCriptografado abaixo.
+  // ═══════════════════════════════════════════════════════════════════
+
+  function base64EncodeUnicode(str) {
+    // btoa não suporta Unicode (emojis/acentos). Isso garante Base64 UTF‑8.
+    if (typeof TextEncoder !== 'undefined') {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      return btoa(binary);
+    }
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+
+  function base64DecodeUnicode(b64) {
+    if (typeof TextDecoder !== 'undefined') {
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+    return decodeURIComponent(escape(atob(b64)));
+  }
+
+  // Nota principal, sempre visível para todos
+  const notaPrincipal = {
+    titulo: 'Meu Diário ✨',
+    data: 'segunda-feira, 2 de março de 2025',
+    corpo: `Se você está lendo isso, significa que eu morri.
+
+Pensei que seria uma ótima ideia criar um appzinho pra poder compartilhar meus últimos pensamentos com vocês, então cá estamos! 
+
+Tem alguns pensamentos que são mais voltados a pessoas específicas, então se você acha que você é uma dessas pessoas, você pode só clicar no cadeado e digitar sua data de nascimento (tipo 01/07/2003 coloca 010703), ou até mesmo seu user (twitter) que ele libera pra você.
+
+--
+
+Oi, meus lindos. Espero que cada um esteja bem.
+
+Antes de qualquer coisa, estou tomando minha medicação direitinho, então nada do que vocês vão ler aqui é um impulso descontrolado. Eu estou consciente, lúcida, só preciso desabafar pela última vez.
+
+Passei muito tempo pensando se deveria escrever isso. Pensei em mil motivos para não fazer, mas não encontrei nenhum que fosse maior do que o peso que eu ainda carrego.
+
+Desde o término, eu não tenho lidado bem com as coisas. Principalmente comigo mesma.
+
+Durante três anos eu namorei a pessoa que foi o amor da minha vida. A gente se conhecia desde 2016. Ela me conhecia como ninguém nunca conheceu. Não foram anos perfeitos, mas foram tudo pra mim. Cada segundo, cada toque, cada abraço tinham um significado imenso.
+
+Eu sempre fui muito insegura. Meu medo de abandono era algo que eu não sabia controlar, e muitas vezes só o pensamento de perder já era o suficiente pra me desestabilizar.
+
+Quando terminou, eu fiquei mal, como qualquer pessoa apaixonada ficaria. Mas, honestamente, só o término não teria sido suficiente pra me destruir do jeito que me destruiu.
+
+O que me quebrou foram as atitudes depois.
+
+Ela sabia das minhas inseguranças em relação a uma pessoa específica. Mesmo assim, manteve essa pessoa por perto, e criou sentimentos. Eu sei que sentimentos não se controlam. Mas atitudes se controlam.
+
+Em duas semanas de término, eles já se diziam ser um do outro. Enquanto isso, pra mim, ela dizia que queria voltar. Que era só questão de tempo. Que não sentia nada além de atração física. Que era passageiro.
+
+Cada comentário pelas minhas costas. Cada mentira olhando nos meus olhos. Cada gesto contraditório.
+
+Isso não só me colocou num poço de tristeza, me fez sentir descartável. Um nada. Como se três anos simplesmente tivessem evaporado. Como se não tivessem sido suficientes nem para sustentar duas semanas de consideração.
+
+Sim, nós tínhamos terminado. E eu nunca culpei alguém por seguir a própria vida. O que doeu foi a ausência completa de responsabilidade emocional.
+
+A gota d’água foi o aniversário dela. O buquê de flores do “amigo sem interesse”. E depois, vê-la chamando ele de “meu homem”.
+
+Eu não guardo rancor. Não desejo mal. Não carrego ódio.
+
+Mas dói ter sido a apaixonada que implorou, que acreditou, que ouviu promessas… e ter que assistir a pessoa que jurava o mundo dizer que pertence a outro, justamente aquele que sempre foi minha maior insegurança.
+
+Eu estou bem. De verdade.
+
+Isso é só o meu último desabafo.
+
+
+— com amor, Isa 🌸
+
+  (pra ler sua notinha pessoal você tem que ir lá pra cima dnv kk)`
+  };
+
+  const notasProtegidas = [
+    {
+      codigo: '280204',
+      titulo: 'Oi, Maria Clara',
+      textoCriptografado: base64EncodeUnicode(`Oi "Mah"...
+Acho que finalmente aconteceu, né?
+O que eu te disse no drive-thru do mc era verdade. Espero que seja feliz com a sua escolha e acho que por vários motivos vocês dois se merecem.
+Termino minha vida com raiva, impotente e com angústia.
+Por todas as coisas que eu te pedi durante o nosso relacionamento você não conseguiu fazer a única que salvaria a minha vida.
+Eu fiz de tudo para te manter por perto, mas ler que ele era seu homem foi demais pra mim, Maria.
+Você nunca deveria ter me culpado por ter ido atrás da pessoa que eu amo, por ter corrido atrás de todas as formas e por ter feito o possível e impossível pra você ficar, mesmo que tenha sido tarde. 
+Eu não vou te amando, eu não me sinto mais dessa forma. Você não é mais digna que eu diga que eu te amo. Você fingiu chorar na minha frente para me manter igual uma cadela na sua vida. Você mentiu para mim dizendo que era questão de tempo para me manter igual bosta na sua vida.
+
+Eu não fui MERDA NENHUMA para você. MERDA NENHUMA. Você podia ter feito o que quisesse, desde que tivesse se afastado daquela vadia. Mas nem isso você foi capaz.
+Bom, vocês se merecem mesmo.
+
+Se cuida, Maria, e vai tomar no meio do seu cú.`)
+    },
+    {
+      codigo: 'artuflame',
+      titulo: 'Oi Arts, oi Mari',
+      textoCriptografado: base64EncodeUnicode(`Ei, gentee!
+      
+Desculpa fazer vocês descobrirem dessa forma, mas foi o melhor para mim.
+Tem muito tempo que isso está doendo e eu só não aguentei mais.
+Tenho muito a agradecer a cada um de vocês por terem me consolado durante esse término, e gostaria que tivéssemos sido muito mais próximos que fomos. Quem sabe na próxima vida? :)
+Vocês dois são lindos, e eu amo vocês. Espero que tenham tudo de bom nesse mundo.`)
+    },
+    {
+      codigo: 'kuromidovapo',
+      titulo: 'Oi Tuts',
+      textoCriptografado: base64EncodeUnicode(`Acabei de conversar com você, sobre o quanto eu estava mal com a vida. Era disso que eu estava falando KKKKKKKKK
+Desculpa ter me afastado e desculpa ter mentido. Fiquei mal pq você nunca me chamava pra jogar mesmo estando dentro do jogo skdfjlsdfkj mas de resto te achava muito legalzinha...
+Você caiu bastante no meu conceito de uns meses pra cá, mas acho que é isso... Te cuida Kuromi :).`)
+    },
+    {
+      codigo: '190103',
+      titulo: 'Oi vito',
+      textoCriptografado: base64EncodeUnicode(`Ah, sei lá, não penso nada demais sobre você.
+Você era o tipo de pessoa que só me mandava mensagem ou quando tava entediado ou quando seu pai precisava de favor, sei lá. Tava de saco cheio já de ti.`)
+    }
+    ,
+    {
+      codigo: '010307',
+      titulo: 'Oi Didi',
+      textoCriptografado: base64EncodeUnicode(`Oi meu bem!
+
+Não sei se você já leu o que escrevi pro seu irmão, mas penso muito diferente com relação a você.
+Você sempre foi uma pessoa querida, que nunca me deixou na mão, que sempre me chamava pra fazer as coisas e que eu adorei ter na minha vida.
+
+Depois dos nossos 18 acho que nos aproximamos bem mais, e eu gostei muito de onde tudo ficou entre a gente. Eu não faria nada diferente com relação a você.
+
+Você vai ser foda! Beijos pra você e pro Allex, lindos!`)
+    }
+  ];
+
+  // ═══════════════════════════════════════════════════════════════════
+
+  let notaDesbloqueada = null; // { titulo, corpo }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function renderContent() {
+    const area = document.getElementById('noteContentArea');
+    const lockBtn = document.getElementById('lockBtn');
+    const lockIcon = document.getElementById('lockIcon');
+
+    if (notaDesbloqueada) {
+      lockBtn.classList.add('is-unlocked');
+      lockIcon.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>`;
+    } else {
+      lockBtn.classList.remove('is-unlocked');
+      lockIcon.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>`;
+    }
+
+    let unlockedBlock = '';
+    if (notaDesbloqueada) {
+      unlockedBlock = `
+        <div class="unlocked-block">
+          <div class="unlocked-divider">
+            <div class="unlocked-divider-line"></div>
+            <div class="unlocked-divider-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+              </svg>
+              ${escapeHtml(notaDesbloqueada.titulo)}
+            </div>
+            <div class="unlocked-divider-line"></div>
+          </div>
+          <div class="unlocked-body">${escapeHtml(notaDesbloqueada.corpo)}</div>
+          <button class="lock-again-btn" onclick="lockAgain()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Ocultar novamente
+          </button>
+        </div>`;
+    }
+
+    area.innerHTML = `
+      <div class="note-date-label">${escapeHtml(notaPrincipal.data)}</div>
+      ${unlockedBlock}
+      <div class="note-title">${escapeHtml(notaPrincipal.titulo)}</div>
+      <div class="note-body">${escapeHtml(notaPrincipal.corpo)}</div>
+    `;
+  }
+
+  function lockAgain() {
+    notaDesbloqueada = null;
+    renderContent();
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────────
+
+  function openModal() {
+    document.getElementById('codeInput').value = '';
+    document.getElementById('modalError').innerHTML = '';
+    document.getElementById('codeInput').classList.remove('error');
+    document.getElementById('modalBackdrop').classList.add('visible');
+    setTimeout(() => document.getElementById('codeInput').focus(), 120);
+  }
+
+  function closeModal() {
+    document.getElementById('modalBackdrop').classList.remove('visible');
+  }
+
+  function handleBackdropClick(e) {
+    if (e.target.id === 'modalBackdrop') closeModal();
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter') tryUnlock();
+    if (e.key === 'Escape') closeModal();
+  }
+
+  function clearError() {
+    document.getElementById('modalError').innerHTML = '';
+    document.getElementById('codeInput').classList.remove('error');
+  }
+
+  function tryUnlock() {
+    const input = document.getElementById('codeInput');
+    const typed = input.value.trim();
+
+    if (!typed) {
+      showError('Por favor, insira um código.');
+      return;
+    }
+
+    const encontrada = notasProtegidas.find(n => n.codigo === typed);
+
+    if (encontrada) {
+      try {
+        const corpo = base64DecodeUnicode(encontrada.textoCriptografado);
+        notaDesbloqueada = { titulo: encontrada.titulo, corpo };
+        closeModal();
+        renderContent();
+      } catch {
+        showError('Erro ao descriptografar o conteúdo.');
+      }
+    } else {
+      showError('Código inválido. Tente novamente.');
+      input.value = '';
+    }
+  }
+
+  function showError(msg) {
+    const input = document.getElementById('codeInput');
+    document.getElementById('modalError').innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      ${msg}`;
+    input.classList.add('error');
+    input.addEventListener('animationend', () => input.classList.remove('error'), { once: true });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderContent();
+  });
+</script>
+</body>
+</html>
